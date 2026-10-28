@@ -50,22 +50,28 @@ const G = {
 
 // ---------------------------------------------------------------- Kodeskærm ---
 async function boot() {
-  let meta;
-  try {
-    meta = await loadMeta();
-  } catch {
-    $('lock-msg').textContent = 'Galleriet kunne ikke indlæses. Prøv at genindlæse siden.';
-    return;
-  }
+  // Formularen må aldrig sendes på den gammeldags måde (så ville koden havne i adresselinjen).
+  let metaPromise = loadMeta();
+  $('lock-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    let meta;
+    try {
+      meta = await metaPromise;
+    } catch {
+      metaPromise = loadMeta();
+      $('lock-msg').textContent = 'Galleriet kunne ikke indlæses. Tjek forbindelsen, og prøv igen.';
+      return;
+    }
+    await tryUnlock($('code').value, meta);
+  });
+  // Fjern en eventuel kode fra adresselinjen (fra en ældre version eller et for tidligt tryk).
+  if (location.search.includes('code=')) history.replaceState(null, '', location.pathname + location.search.replace(/[?&]code=[^&]*/g, '').replace(/^&/, '?'));
   if (!hasWebGL()) {
     $('lock-msg').textContent = 'Din browser understøtter desværre ikke 3D-grafik (WebGL).';
     $('lock-btn').disabled = true;
     return;
   }
-  $('lock-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    await tryUnlock($('code').value, meta);
-  });
+  metaPromise.catch(() => ($('lock-msg').textContent = 'Galleriet kunne ikke indlæses. Prøv at genindlæse siden.'));
   setTimeout(() => $('code').focus({ preventScroll: true }), 300);
 }
 
