@@ -64,6 +64,8 @@ async function boot() {
     }
     await tryUnlock($('code').value, meta);
   });
+  // Blev der trykket "Træd ind", før scriptet var klar? Så sendes koden nu.
+  if (window.__gftPending && $('code').value) $('lock-form').requestSubmit ? $('lock-form').requestSubmit() : $('lock-form').dispatchEvent(new Event('submit', { cancelable: true }));
   // Fjern en eventuel kode fra adresselinjen (fra en ældre version eller et for tidligt tryk).
   if (location.search.includes('code=')) history.replaceState(null, '', location.pathname + location.search.replace(/[?&]code=[^&]*/g, '').replace(/^&/, '?'));
   if (!hasWebGL()) {
