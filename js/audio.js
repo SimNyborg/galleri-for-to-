@@ -268,6 +268,7 @@ export class Audio {
   }
 
   finale() {
+    if (!this.ctx) return;
     const midi = (n) => 440 * Math.pow(2, (n - 69) / 12);
     [53, 60, 65, 69, 72, 77].forEach((n, i) => this.piano(midi(n), 4, 0.08, this.ctx.currentTime + i * 0.16));
     this.chime();

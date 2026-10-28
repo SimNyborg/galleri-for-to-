@@ -113,7 +113,7 @@ export class Controls {
   up(e, cancel = false) {
     const isTap = (p, limit) => !cancel && p.moved < limit && performance.now() - p.t < 450;
     if (this.mouse && e.pointerId === this.mouse.id) {
-      if (isTap(this.mouse, 6) && this.mouse.sx === this.mouse.sx) this.onTap?.(e.clientX, e.clientY);
+      if (isTap(this.mouse, 6)) this.onTap?.(e.clientX, e.clientY);
       this.mouse = null;
     } else if (this.look && e.pointerId === this.look.id) {
       if (isTap(this.look, 12)) this.onTap?.(e.clientX, e.clientY);
