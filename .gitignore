@@ -1,0 +1,13 @@
+# Originale billeder og ukrypterede tekster må aldrig komme i repoet.
+private/
+*.jpg
+*.jpeg
+*.png
+*.heic
+*.mp4
+*.mov
+tekster.json
+manifest-edit.json
+.DS_Store
+__pycache__/
+node_modules/

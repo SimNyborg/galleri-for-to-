@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="robots" content="noindex, nofollow, noarchive, noimageindex">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#0c0a09">
+  <title>Galleri for to</title>
+  <meta name="description" content="En privat udstilling.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2314100d'/%3E%3Cpath d='M12 44 9 20l13 11 10-17 10 17 13-11-3 24z' fill='%23d9b25b'/%3E%3Crect x='12' y='47' width='40' height='6' rx='2' fill='%23d9b25b'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+</head>
+<body>
+  <canvas id="c" aria-label="Galleriet i 3D"></canvas>
+
+  <section id="lock" class="screen">
+    <div class="card">
+      <svg class="crown" viewBox="0 0 64 40" aria-hidden="true"><path d="M6 32 3 8l13 11L32 2l16 17 13-11-3 24z"/><rect x="6" y="34" width="52" height="5" rx="2"/></svg>
+      <h1>Galleri for to</h1>
+      <p class="sub">En privat udstilling</p>
+      <form id="lock-form" autocomplete="off">
+        <label for="code">Indtast koden for at træde ind</label>
+        <input id="code" name="code" type="password" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" required>
+        <button type="submit" id="lock-btn">Træd ind</button>
+        <p id="lock-msg" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </section>
+
+  <section id="loading" class="screen hidden">
+    <div class="card">
+      <svg class="crown small" viewBox="0 0 64 40" aria-hidden="true"><path d="M6 32 3 8l13 11L32 2l16 17 13-11-3 24z"/><rect x="6" y="34" width="52" height="5" rx="2"/></svg>
+      <h2 id="load-title">Galleriet gøres klar</h2>
+      <div class="bar"><span id="load-bar"></span></div>
+      <p id="load-text">Et øjeblik …</p>
+      <div id="ready" class="hidden">
+        <p class="lead">Limousinen holder ude foran.</p>
+        <p class="program">Aftenens program: et glas champagne, lidt sushi og en kop kaffe. Når alle tre er klaret, åbner Hovedværket.</p>
+        <button id="enter-btn">Stig ud af limousinen</button>
+        <p class="hint" id="controls-hint"></p>
+      </div>
+    </div>
+  </section>
+
+  <div id="titlecard" class="hidden" aria-live="polite"><div class="t1"></div><div class="t2"></div></div>
+  <button id="skip" class="hidden">Spring over</button>
+
+  <div id="hud" class="hidden">
+    <div id="quest" class="panel">
+      <div class="qtitle">Aftenens program</div>
+      <ul>
+        <li data-q="champagne"><span class="check"></span><span class="ico">🥂</span>Et glas champagne</li>
+        <li data-q="sushi"><span class="check"></span><span class="ico">🍣</span>Lidt sushi</li>
+        <li data-q="coffee"><span class="check"></span><span class="ico">☕</span>En kop kaffe</li>
+        <li data-q="final" class="locked"><span class="check"></span><span class="ico">👑</span><span id="final-label">Hovedværket</span></li>
+      </ul>
+      <div class="seen">Billeder set <b id="seen">0</b></div>
+    </div>
+    <div id="corner">
+      <canvas id="minimap" width="300" height="300" aria-hidden="true"></canvas>
+      <div id="buttons">
+        <button id="btn-sound" aria-label="Slå lyd fra">🔊</button>
+        <button id="btn-help" aria-label="Hjælp">?</button>
+      </div>
+    </div>
+    <div id="caption" class="hidden"><div class="ct"></div><div class="cs"></div><div class="ch">Tryk på billedet for at se det tæt på</div></div>
+    <button id="action" class="hidden"></button>
+    <div id="toast" role="status" aria-live="polite"></div>
+  </div>
+  <div id="joy" aria-hidden="true"><div id="joy-knob"></div></div>
+
+  <section id="lightbox" class="hidden" role="dialog" aria-modal="true" aria-label="Billede">
+    <button class="lb-btn" id="lb-close" aria-label="Luk">✕</button>
+    <button class="lb-btn" id="lb-prev" aria-label="Forrige">‹</button>
+    <button class="lb-btn" id="lb-next" aria-label="Næste">›</button>
+    <figure>
+      <div class="lb-frame"><img id="lb-img" alt=""><video id="lb-video" playsinline loop controls class="hidden"></video></div>
+      <figcaption>
+        <h3 id="lb-title"></h3>
+        <p id="lb-sub"></p>
+        <p id="lb-desc"></p>
+        <span id="lb-count"></span>
+      </figcaption>
+    </figure>
+  </section>
+
+  <section id="help" class="screen hidden" role="dialog" aria-modal="true" aria-label="Hjælp">
+    <div class="card">
+      <h2>Sådan går du rundt</h2>
+      <div id="help-body"></div>
+      <button id="help-close">Tilbage til galleriet</button>
+      <button id="help-lock" class="quiet">Lås galleriet</button>
+    </div>
+  </section>
+
+  <section id="final" class="screen hidden" role="dialog" aria-modal="true">
+    <div class="card final-card">
+      <svg class="crown" viewBox="0 0 64 40" aria-hidden="true"><path d="M6 32 3 8l13 11L32 2l16 17 13-11-3 24z"/><rect x="6" y="34" width="52" height="5" rx="2"/></svg>
+      <h2 id="final-title"></h2>
+      <p id="final-text"></p>
+      <p id="final-sign"></p>
+      <button id="final-close">Bliv i galleriet</button>
+    </div>
+  </section>
+
+  <noscript><div class="noscript">Galleriet kræver JavaScript.</div></noscript>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

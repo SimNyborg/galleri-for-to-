@@ -1,0 +1,189 @@
+// Fælles materialer. Teksturer genereres én gang og deles.
+import * as THREE from 'three';
+import * as T from './textures.js';
+
+function std(name, opts) {
+  const m = new THREE.MeshStandardMaterial(opts);
+  m.name = name;
+  return m;
+}
+
+export function createMaterials() {
+  const tex = {
+    checker: T.toTexture(T.checkerMarble(), { repeat: [1, 1] }),
+    herring: T.toTexture(T.herringbone(), { repeat: [1, 1] }),
+    planksDark: T.toTexture(T.planks([70, 44, 30], 3)),
+    terrazzo: T.toTexture(T.terrazzo()),
+    plaster: T.toTexture(T.plaster()),
+    carpetRed: T.toTexture(T.carpet([140, 12, 22])),
+    damask: T.toTexture(T.damask()),
+    stone: T.toTexture(T.stoneBlocks()),
+    pavers: T.toTexture(T.pavers()),
+    asphalt: T.toTexture(T.asphalt()),
+    oak: T.toTexture(T.oakWood()),
+    marbleWhite: T.toTexture(T.whiteMarble()),
+    marbleDark: T.toTexture(T.darkMarble()),
+    ornament: T.toTexture(T.ornament(), { srgb: false }),
+    pool: T.toTexture(T.lightPool(), { wrap: false }),
+    glow: T.toTexture(T.radial('rgba(255,235,200,1)', 'rgba(255,220,170,0)'), { wrap: false }),
+    shadow: T.toTexture(T.radial('rgba(0,0,0,0.55)', 'rgba(0,0,0,0)'), { wrap: false }),
+    paper: T.toTexture(T.paper()),
+    city1: T.toTexture(T.cityWindows(3)),
+    city2: T.toTexture(T.cityWindows(8)),
+  };
+
+  const M = {
+    tex,
+    // Gulve
+    floorMarble: std('floorMarble', { map: tex.checker, roughness: 0.18, metalness: 0.05, envMapIntensity: 0.9 }),
+    floorParquet: std('floorParquet', { map: tex.herring, roughness: 0.42, envMapIntensity: 0.7 }),
+    floorDarkWood: std('floorDarkWood', { map: tex.planksDark, roughness: 0.5, envMapIntensity: 0.5 }),
+    floorTerrazzo: std('floorTerrazzo', { map: tex.terrazzo, roughness: 0.3, envMapIntensity: 0.7 }),
+    floorDamask: std('floorDamask', { map: tex.damask, roughness: 0.95, envMapIntensity: 0.4 }),
+    // Vægge (vertexColors giver blød skygge mod gulv og loft)
+    wallFoyer: std('wallFoyer', { color: '#ece5d8', map: tex.plaster, roughness: 0.92, vertexColors: true, envMapIntensity: 0.55 }),
+    wallHall: std('wallHall', { color: '#e7e3db', map: tex.plaster, roughness: 0.92, vertexColors: true, envMapIntensity: 0.55 }),
+    wallSushi: std('wallSushi', { color: '#2b2f36', map: tex.plaster, roughness: 0.95, vertexColors: true, envMapIntensity: 0.55 }),
+    wallCafe: std('wallCafe', { color: '#82958a', map: tex.plaster, roughness: 0.92, vertexColors: true, envMapIntensity: 0.55 }),
+    wallFinal: std('wallFinal', { color: '#6b1d29', map: tex.plaster, roughness: 0.9, vertexColors: true, envMapIntensity: 0.55 }),
+    ceiling: std('ceiling', { color: '#ebe7df', roughness: 0.95, envMapIntensity: 0.5 }),
+    ceilingDark: std('ceilingDark', { color: '#1d2025', roughness: 0.95 }),
+    trim: std('trim', { color: '#f1ede4', roughness: 0.5, envMapIntensity: 0.7 }),
+    trimDark: std('trimDark', { color: '#1c1b1a', roughness: 0.6 }),
+    // Metaller
+    gold: std('gold', { color: '#d9b25b', metalness: 1, roughness: 0.28, envMapIntensity: 1.4 }),
+    goldOrnate: std('goldOrnate', {
+      color: '#d4ad55',
+      metalness: 1,
+      roughness: 0.32,
+      bumpMap: tex.ornament,
+      bumpScale: 2.2,
+      envMapIntensity: 1.4,
+    }),
+    brass: std('brass', { color: '#b8924f', metalness: 1, roughness: 0.35, envMapIntensity: 1.2 }),
+    chrome: std('chrome', { color: '#e6e6e6', metalness: 1, roughness: 0.12, envMapIntensity: 1.5 }),
+    silver: std('silver', { color: '#cfd2d6', metalness: 1, roughness: 0.22, envMapIntensity: 1.3 }),
+    // Rammer
+    frameBlack: std('frameBlack', { color: '#141414', roughness: 0.45 }),
+    frameWhite: std('frameWhite', { color: '#f3f2ee', roughness: 0.4 }),
+    frameOak: std('frameOak', { map: tex.oak, roughness: 0.55 }),
+    frameAlu: std('frameAlu', { color: '#b9bcc0', metalness: 0.9, roughness: 0.35 }),
+    mat: std('mat', { color: '#f8f5ee', roughness: 1 }),
+    matCream: std('matCream', { color: '#efe6d3', roughness: 1 }),
+    slip: std('slip', { color: '#2a2016', roughness: 0.8 }),
+    canvasSide: std('canvasSide', { color: '#e9e5dc', roughness: 0.95 }),
+    polaroid: std('polaroid', { color: '#fbfaf6', roughness: 0.85 }),
+    // Træ og stof
+    oak: std('oak', { map: tex.oak, roughness: 0.6 }),
+    darkWood: std('darkWood', { color: '#ffffff', map: tex.planksDark, roughness: 0.55 }),
+    walnut: std('walnut', { color: '#5a3a26', roughness: 0.5 }),
+    leather: std('leather', { color: '#2c1d16', roughness: 0.55 }),
+    velvet: std('velvet', { color: '#7d0f1f', roughness: 0.85 }),
+    carpetRed: std('carpetRed', { map: tex.carpetRed, roughness: 0.95, envMapIntensity: 0.25 }),
+    marbleWhite: std('marbleWhite', { map: tex.marbleWhite, roughness: 0.15, envMapIntensity: 1 }),
+    marbleDark: std('marbleDark', { map: tex.marbleDark, roughness: 0.18, envMapIntensity: 1 }),
+    linen: std('linen', { color: '#f2eee6', roughness: 0.95 }),
+    plantGreen: std('plantGreen', { color: '#2f5a32', roughness: 0.8 }),
+    plantDark: std('plantDark', { color: '#22422a', roughness: 0.85 }),
+    terracotta: std('terracotta', { color: '#a9583a', roughness: 0.85 }),
+    potBlack: std('potBlack', { color: '#1d1d1f', roughness: 0.4, metalness: 0.2 }),
+    // Udendørs (svag refleksion fra miljøet om natten)
+    stone: std('stone', { map: tex.stone, roughness: 0.85, envMapIntensity: 0.25 }),
+    stoneSmooth: std('stoneSmooth', { color: '#d6cdbb', roughness: 0.75, envMapIntensity: 0.25 }),
+    pavers: std('pavers', { map: tex.pavers, roughness: 0.9, envMapIntensity: 0.15 }),
+    asphalt: std('asphalt', { map: tex.asphalt, roughness: 0.75, envMapIntensity: 0.2 }),
+    curb: std('curb', { color: '#8d8a84', roughness: 0.85, envMapIntensity: 0.2 }),
+    lampPost: std('lampPost', { color: '#1f2622', roughness: 0.5, metalness: 0.5, envMapIntensity: 0.4 }),
+    building: std('building', { color: '#3a3532', roughness: 0.9, envMapIntensity: 0.1 }),
+    // Selvlysende
+    warmLight: new THREE.MeshBasicMaterial({ color: '#ffe3b0', toneMapped: false }),
+    windowGlow: new THREE.MeshBasicMaterial({ color: '#ffcf8a', toneMapped: false }),
+    skylight: new THREE.MeshBasicMaterial({ color: '#eef3ff', toneMapped: false }),
+    lantern: new THREE.MeshBasicMaterial({ map: tex.paper, color: '#ffd9a0', toneMapped: false }),
+    cityA: new THREE.MeshBasicMaterial({ map: tex.city1, color: '#c8c8c8' }),
+    cityB: new THREE.MeshBasicMaterial({ map: tex.city2, color: '#c8c8c8' }),
+    // Glas og effekter
+    glass: new THREE.MeshStandardMaterial({
+      color: '#ffffff',
+      metalness: 0,
+      roughness: 0.05,
+      transparent: true,
+      opacity: 0.22,
+      envMapIntensity: 1.6,
+      depthWrite: false,
+    }),
+    crystal: new THREE.MeshStandardMaterial({
+      color: '#ffffff',
+      emissive: '#fff4dc',
+      emissiveIntensity: 0.6,
+      metalness: 0.2,
+      roughness: 0.05,
+      transparent: true,
+      opacity: 0.75,
+      envMapIntensity: 2,
+    }),
+    pool: new THREE.MeshBasicMaterial({
+      map: tex.pool,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      toneMapped: false,
+      opacity: 0.9,
+    }),
+    glow: new THREE.MeshBasicMaterial({
+      map: tex.glow,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      toneMapped: false,
+    }),
+    shadow: new THREE.MeshBasicMaterial({ map: tex.shadow, transparent: true, depthWrite: false }),
+    champagne: new THREE.MeshStandardMaterial({
+      color: '#f3d27a',
+      emissive: '#5a3f0a',
+      emissiveIntensity: 0.6,
+      roughness: 0.1,
+      transparent: true,
+      opacity: 0.82,
+      envMapIntensity: 1.2,
+    }),
+    coffee: std('coffee', { color: '#3b2314', roughness: 0.25 }),
+    crema: std('crema', { color: '#b37a45', roughness: 0.5 }),
+    porcelain: std('porcelain', { color: '#fbfaf7', roughness: 0.18, envMapIntensity: 1.1 }),
+    rice: std('rice', { color: '#f6f3ec', roughness: 0.85 }),
+    nori: std('nori', { color: '#16221b', roughness: 0.7 }),
+    tamago: std('tamago', { color: '#f2c94c', roughness: 0.6 }),
+    hinoki: std('hinoki', { color: '#c9ad84', roughness: 0.6, envMapIntensity: 0.6 }),
+    belt: std('belt', { color: '#2d2f33', roughness: 0.4, metalness: 0.4 }),
+    indigo: std('indigo', { color: '#1f2d55', roughness: 0.9, side: THREE.DoubleSide }),
+    pastry: std('pastry', { color: '#c9853b', roughness: 0.6 }),
+    leafLacquer: std('leafLacquer', { color: '#16302a', roughness: 0.3, metalness: 0.1 }),
+    rose: std('rose', { color: '#9c1027', roughness: 0.7, side: THREE.DoubleSide }),
+    flame: new THREE.MeshBasicMaterial({ color: '#ffcf70', toneMapped: false }),
+    // Mennesker (stiliserede figurer)
+    suit: std('suit', { color: '#15161a', roughness: 0.6 }),
+    coat: std('coat', { color: '#3b3630', roughness: 0.8 }),
+    shirt: std('shirt', { color: '#f5f5f2', roughness: 0.7 }),
+    skin: std('skin', { color: '#e6b99a', roughness: 0.7 }),
+    skinB: std('skinB', { color: '#c88f6b', roughness: 0.7 }),
+    hair: std('hair', { color: '#2a1d14', roughness: 0.8 }),
+    hairB: std('hairB', { color: '#6b4a2c', roughness: 0.8 }),
+    glove: std('glove', { color: '#ffffff', roughness: 0.8 }),
+    // Bil
+    paint: new THREE.MeshPhysicalMaterial({
+      color: '#030304',
+      metalness: 0.35,
+      roughness: 0.3,
+      clearcoat: 1,
+      clearcoatRoughness: 0.08,
+      envMapIntensity: 0.4,
+    }),
+    tinted: std('tinted', { color: '#0b0d12', metalness: 0.4, roughness: 0.08, envMapIntensity: 1.5 }),
+    tire: std('tire', { color: '#111111', roughness: 0.9 }),
+    headlight: new THREE.MeshBasicMaterial({ color: '#fffaf0', toneMapped: false }),
+    taillight: new THREE.MeshBasicMaterial({ color: '#ff2a2a', toneMapped: false }),
+  };
+  M.pool.name = 'pool';
+  M.glow.name = 'glow';
+  return M;
+}
