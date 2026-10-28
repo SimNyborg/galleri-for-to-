@@ -580,6 +580,11 @@ function startPlay() {
   $('skip').classList.add('hidden');
   G.fade.style.opacity = '0';
   G.vignette.style.opacity = '0';
+  // fjern overgangslagene helt, så de aldrig kan blive hængende over spillet
+  setTimeout(() => {
+    G.fade?.remove();
+    G.vignette?.remove();
+  }, 2000);
   G.controls.setPose(INTRO_END.x, INTRO_END.z, INTRO_END.yaw, INTRO_END.pitch);
   G.controls.enabled = true;
   G.controls.applyCamera();
