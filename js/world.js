@@ -5,16 +5,22 @@ import { worldUVBox } from './builder.js';
 export const T = 0.2; // vægtykkelse
 
 export const ROOMS = [
-  { id: 'foyer', name: 'Champagnesalonen', x0: -6, x1: 6, z0: 0, z1: 10, h: 4.6, floor: 'floorMarble', floorUV: 1.4, wall: 'wallFoyer', trim: 'trim', photoH: 1.35, center: 1.65, entry: [0, 9] },
-  { id: 'hall', name: 'Rejsesalen', x0: -10, x1: 10, z0: -16, z1: 0, h: 5.6, floor: 'floorParquet', floorUV: 3.2, wall: 'wallHall', trim: 'trim', photoH: 1.75, center: 1.85, wires: true, entry: [0, -1] },
+  { id: 'foyer', name: 'Champagnesalonen', x0: -6, x1: 6, z0: 0, z1: 10, h: 4.6, floor: 'floorMarble', floorUV: 1.4, wall: 'wallFoyer', trim: 'trim', wainscot: 'trim', photoH: 1.35, center: 1.68, entry: [0, 9] },
+  { id: 'salon', name: 'Salonen', x0: -21.8, x1: -6, z0: 0, z1: 10, h: 4.6, floor: 'floorSalon', floorUV: 3.2, wall: 'wallSalon', trim: 'walnut', wainscot: 'walnut', ceiling: 'ceilingSalon', photoH: 1.1, center: 1.7, entry: [-7, 5],
+    reserve: { n: [[-23, -5]], w: [[-1, 11]], s: [[-23, -5]] }, windows: { s: [-20, -17, -14.4, -10.55] } },
+  { id: 'spa', name: 'Spaen', x0: 6, x1: 21.8, z0: 0, z1: 10, h: 4.6, floor: 'floorSpa', floorUV: 1.2, wall: 'wallSpa', trim: 'trim', ceiling: 'ceilingSpa', photoH: 1.15, center: 1.68, entry: [7, 5],
+    reserve: { e: [[3.2, 6.8]], s: [[5, 23]] }, windows: { s: [10.55, 14.4, 17, 20] }, beams: false },
+  { id: 'hall', name: 'Rejsesalen', x0: -10, x1: 10, z0: -16, z1: 0, h: 5.6, floor: 'floorParquet', floorUV: 3.2, wall: 'wallHall', trim: 'trim', wainscot: 'trim', photoH: 1.75, center: 1.9, wires: true, entry: [0, -1] },
   { id: 'sushi', name: 'Sushibaren', x0: -20, x1: -10, z0: -14, z1: -2, h: 4.2, floor: 'floorDarkWood', floorUV: 4, wall: 'wallSushi', trim: 'trimDark', ceiling: 'ceilingDark', photoH: 1.25, center: 1.62, entry: [-11, -8] },
   { id: 'cafe', name: 'Caféen', x0: 10, x1: 20, z0: -14, z1: -2, h: 4.2, floor: 'floorTerrazzo', floorUV: 2.2, wall: 'wallCafe', trim: 'trim', photoH: 1.15, center: 1.62, entry: [11, -8], reserve: { e: [[-14, -2]] } },
-  { id: 'final', name: 'Hovedværket', x0: -5, x1: 5, z0: -26, z1: -16, h: 5.2, floor: 'floorDamask', floorUV: 2.4, wall: 'wallFinal', trim: 'gold', photoH: 1.3, center: 1.75, entry: [0, -17], noAuto: true },
+  { id: 'final', name: 'Hovedværket', x0: -5, x1: 5, z0: -26, z1: -16, h: 5.2, floor: 'floorDamask', floorUV: 2.4, wall: 'wallFinal', trim: 'gold', wainscot: 'gold', photoH: 1.3, center: 1.75, entry: [0, -17], noAuto: true },
 ];
 
 export const DOORS = [
   { id: 'entrance', axis: 'z', at: 10, from: -1.3, to: 1.3, h: 3.4, rooms: ['foyer'] },
   { id: 'foyer-hall', axis: 'z', at: 0, from: -1.4, to: 1.4, h: 3.4, rooms: ['foyer', 'hall'] },
+  { id: 'foyer-salon', axis: 'x', at: -6, from: 3.7, to: 6.3, h: 3.2, rooms: ['foyer', 'salon'] },
+  { id: 'foyer-spa', axis: 'x', at: 6, from: 3.7, to: 6.3, h: 3.2, rooms: ['foyer', 'spa'] },
   { id: 'hall-sushi', axis: 'x', at: -10, from: -9.3, to: -6.7, h: 3.2, rooms: ['hall', 'sushi'] },
   { id: 'hall-cafe', axis: 'x', at: 10, from: -9.3, to: -6.7, h: 3.2, rooms: ['hall', 'cafe'] },
   { id: 'hall-final', axis: 'z', at: -16, from: -1.4, to: 1.4, h: 3.6, rooms: ['hall', 'final'] },
@@ -153,7 +159,9 @@ export function buildRooms(B, M, colliders) {
         // fodpanel
         const bc0 = faceIn > 0 ? faceC : faceC - 0.03;
         wallBox(B, trimMat, side, u0, u1, bc0, bc0 + 0.03, 0, 0.15);
+        if (r.wainscot) wainscot(B, M[r.wainscot], side, u0, u1, faceC, faceIn, r.wainscot === 'walnut');
       }
+      for (const wx of (r.windows && r.windows[side]) || []) windowAt(B, M, side, wx, faceC, faceIn);
       // overliggere over døre + dørindfatning
       for (const g of gaps) {
         wallBox(B, wallMat, side, g.a, g.b, s.c0, s.c1, g.door.h, r.h, { uv: 2.5, grad: [0.92, 1.0], gy0: 0, gy1: r.h });
@@ -171,6 +179,8 @@ export function buildRooms(B, M, colliders) {
       // kronelist og billedliste
       const k0 = faceIn > 0 ? faceC : faceC - 0.09;
       wallBox(B, trimMat, side, s.u0, s.u1, k0, k0 + 0.09, r.h - 0.2, r.h);
+      const k1 = faceIn > 0 ? faceC : faceC - 0.05;
+      wallBox(B, trimMat, side, s.u0, s.u1, k1, k1 + 0.05, r.h - 0.34, r.h - 0.2);
       if (r.wires) {
         const p0 = faceIn > 0 ? faceC : faceC - 0.035;
         wallBox(B, M.brass, side, s.u0, s.u1, p0, p0 + 0.035, r.h - 0.62, r.h - 0.56);
@@ -211,12 +221,70 @@ export function buildRooms(B, M, colliders) {
     const cg = new THREE.PlaneGeometry(fw, fd);
     cg.rotateX(Math.PI / 2);
     B.geom(M[r.ceiling || 'ceiling'], cg, [(r.x0 + r.x1) / 2, r.h, (r.z0 + r.z1) / 2]);
-    const beamMat = r.ceiling === 'ceilingDark' ? M.trimDark : M.trim;
-    const step = r.id === 'hall' ? 4 : 2.5;
-    for (let x = r.x0 + step; x < r.x1 - 0.5; x += step) B.box(beamMat, 0.16, 0.18, fd - 2 * T, x, r.h - 0.09, (r.z0 + r.z1) / 2);
-    for (let z = r.z0 + step; z < r.z1 - 0.5; z += step) B.box(beamMat, fw - 2 * T, 0.18, 0.16, (r.x0 + r.x1) / 2, r.h - 0.09, z);
+    if (r.beams !== false) {
+      const beamMat = r.ceiling === 'ceilingDark' ? M.trimDark : r.id === 'salon' ? M.walnut : M.trim;
+      const step = r.id === 'hall' ? 4 : 2.5;
+      for (let x = r.x0 + step; x < r.x1 - 0.5; x += step) B.box(beamMat, 0.16, 0.18, fd - 2 * T, x, r.h - 0.09, (r.z0 + r.z1) / 2);
+      for (let z = r.z0 + step; z < r.z1 - 0.5; z += step) B.box(beamMat, fw - 2 * T, 0.18, 0.16, (r.x0 + r.x1) / 2, r.h - 0.09, z);
+      // forgyldte rosetter i kassetternes krydsninger
+      if (r.id === 'hall' || r.id === 'foyer' || r.id === 'salon' || r.id === 'final') {
+        const ros = new THREE.CylinderGeometry(0.11, 0.11, 0.03, 16);
+        for (let x = r.x0 + step; x < r.x1 - 0.5; x += step)
+          for (let z = r.z0 + step; z < r.z1 - 0.5; z += step) B.geom(M.gold, ros, [x, r.h - 0.185, z]);
+        ros.dispose();
+      }
+    }
   }
   return { slots, doorLeaves };
+}
+
+// Brystpanel: listen i hoftehøjde og rammer under den.
+function wainscot(B, mat, side, u0, u1, faceC, faceIn, solid) {
+  const at = (c, d) => (faceIn > 0 ? faceC + c : faceC - c - d);
+  if (solid) wallBox(B, mat, side, u0, u1, at(0, 0.02), at(0, 0.02) + 0.02, 0.15, 0.9);
+  wallBox(B, mat, side, u0, u1, at(solid ? 0.02 : 0, 0.04), at(solid ? 0.02 : 0, 0.04) + 0.04, 0.86, 0.93);
+  const L = u1 - u0;
+  if (L < 0.8) return;
+  const n = Math.max(1, Math.round((L - 0.25) / 1.35));
+  const gap = 0.22;
+  const pw = (L - gap * (n + 1)) / n;
+  const c0 = at(solid ? 0.02 : 0, 0.02);
+  for (let i = 0; i < n; i++) {
+    const a = u0 + gap + i * (pw + gap);
+    const b = a + pw;
+    const y0 = 0.27;
+    const y1 = 0.74;
+    const t = 0.03;
+    wallBox(B, mat, side, a, b, c0, c0 + 0.02, y1 - t, y1);
+    wallBox(B, mat, side, a, b, c0, c0 + 0.02, y0, y0 + t);
+    wallBox(B, mat, side, a, a + t, c0, c0 + 0.02, y0, y1);
+    wallBox(B, mat, side, b - t, b, c0, c0 + 0.02, y0, y1);
+  }
+}
+
+// Højt vindue med nattehimmel, sprosser og fløjlsgardiner (kun på sydvæggene ud mod gaden).
+function windowAt(B, M, side, u, faceC, faceIn) {
+  const at = (c, d) => (faceIn > 0 ? faceC + c : faceC - c - d);
+  const w = 1.25;
+  const y0 = 1.1;
+  const y1 = 4.0;
+  wallBox(B, M.nightSky, side, u - w / 2, u + w / 2, at(0, 0.005), at(0, 0.005) + 0.005, y0, y1);
+  const fr = M.trim;
+  wallBox(B, fr, side, u - w / 2 - 0.08, u - w / 2, at(0, 0.06), at(0, 0.06) + 0.06, y0 - 0.08, y1 + 0.08);
+  wallBox(B, fr, side, u + w / 2, u + w / 2 + 0.08, at(0, 0.06), at(0, 0.06) + 0.06, y0 - 0.08, y1 + 0.08);
+  wallBox(B, fr, side, u - w / 2 - 0.08, u + w / 2 + 0.08, at(0, 0.06), at(0, 0.06) + 0.06, y1, y1 + 0.08);
+  wallBox(B, fr, side, u - w / 2 - 0.12, u + w / 2 + 0.12, at(0, 0.14), at(0, 0.14) + 0.14, y0 - 0.1, y0);
+  wallBox(B, fr, side, u - 0.02, u + 0.02, at(0, 0.03), at(0, 0.03) + 0.03, y0, y1);
+  for (let k = 1; k < 4; k++) wallBox(B, fr, side, u - w / 2, u + w / 2, at(0, 0.03), at(0, 0.03) + 0.03, y0 + ((y1 - y0) * k) / 4 - 0.02, y0 + ((y1 - y0) * k) / 4 + 0.02);
+  // gardiner med folder
+  for (const sgn of [-1, 1]) {
+    const cu = u + sgn * (w / 2 + 0.22);
+    for (let f = 0; f < 4; f++) {
+      const fu = cu + sgn * (f - 1.5) * 0.09;
+      wallBox(B, M.velvet, side, fu - 0.06, fu + 0.06, at(0.08 + (f % 2) * 0.05, 0.07), at(0.08 + (f % 2) * 0.05, 0.07) + 0.07, 0.02, 4.32);
+    }
+  }
+  wallBox(B, M.gold, side, u - w / 2 - 0.6, u + w / 2 + 0.6, at(0.16, 0.04), at(0.16, 0.04) + 0.04, 4.34, 4.39);
 }
 
 // Dobbeltdøre. Returnerer pivots, som animeres når døren åbnes.

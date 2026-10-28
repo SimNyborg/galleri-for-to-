@@ -8,56 +8,38 @@ const AUTO_STYLES = ['gold', 'black', 'oak', 'white', 'canvas', 'polaroid'];
 const MIN_SPACING = 1.9;
 
 // --- Fordeling ----------------------------------------------------------------
-export function layoutPhotos(photos, slots) {
+// items: billeder (isVideo=false) og videoer (isVideo=true). Alle har en sal i kataloget.
+export function layoutPhotos(photos, videos, slots) {
   const roomById = Object.fromEntries(ROOMS.map((r) => [r.id, r]));
-  const assigned = photos.map((p, i) => ({ photo: p, index: i, room: roomById[p.room] ? p.room : null }));
-
-  // Billeder uden (gyldig) sal fordeles til salene med mest plads.
-  const capacity = {};
-  for (const r of ROOMS) {
-    if (r.noAuto) continue;
-    const len = slots.filter((s) => s.room === r.id).reduce((a, s) => a + (s.u1 - s.u0), 0);
-    capacity[r.id] = len / MIN_SPACING;
-  }
-  const used = {};
-  for (const a of assigned) if (a.room) used[a.room] = (used[a.room] || 0) + 1;
-  for (const a of assigned) {
-    if (a.room) continue;
-    const best = Object.keys(capacity).sort((x, y) => capacity[y] - (used[y] || 0) - (capacity[x] - (used[x] || 0)))[0];
-    a.room = best;
-    used[best] = (used[best] || 0) + 1;
-  }
-  // Overfyldte sale afgiver billeder til andre sale.
-  for (const id of Object.keys(capacity)) {
-    const inRoom = assigned.filter((a) => a.room === id && a.photo.style !== 'easel');
-    let extra = inRoom.length - Math.floor(capacity[id]);
-    while (extra-- > 0) {
-      const target = Object.keys(capacity).sort((x, y) => capacity[y] - (used[y] || 0) - (capacity[x] - (used[x] || 0)))[0];
-      if (target === id || capacity[target] - (used[target] || 0) < 1) break;
-      const moved = inRoom.pop();
-      moved.room = target;
-      used[id]--;
-      used[target] = (used[target] || 0) + 1;
-    }
-  }
-
+  const fallback = (id) => (roomById[id] ? id : 'hall');
   let autoStyle = 0;
+  const assigned = [
+    ...photos.map((p, i) => ({ photo: p, index: i, isVideo: false, room: fallback(p.room), place: p.place || null })),
+    ...videos.map((v, i) => ({ photo: v, index: i, isVideo: true, room: fallback(v.room), place: null, style: 'screen' })),
+  ];
   for (const a of assigned) {
+    if (a.isVideo) continue;
     a.style = a.photo.style && a.photo.style !== 'auto' ? a.photo.style : AUTO_STYLES[autoStyle++ % AUTO_STYLES.length];
   }
 
   const placements = [];
   for (const r of ROOMS) {
-    const items = assigned.filter((a) => a.room === r.id);
+    let items = assigned.filter((a) => a.room === r.id);
     if (!items.length) continue;
     if (r.id === 'final') {
       placeFinal(r, items, placements);
       continue;
     }
+    if (r.id === 'salon') {
+      placeSalonHang(r, items.filter((a) => a.place === 'hang'), placements);
+      placeMantel(r, items.filter((a) => a.place === 'mantel'), placements);
+      items = items.filter((a) => a.place !== 'hang' && a.place !== 'mantel');
+    }
     const floorItems = items.filter((a) => a.style === 'easel');
     const wallItems = items.filter((a) => a.style !== 'easel');
     placeEasels(r, floorItems, placements);
-    // Sortér vægstykker rundt i rummet med start ved indgangen (med uret).
+    if (!wallItems.length) continue;
+    // Sortér vægstykker rundt i rummet med start ved indgangen.
     const cx = (r.x0 + r.x1) / 2;
     const cz = (r.z0 + r.z1) / 2;
     const a0 = Math.atan2(r.entry[1] - cz, r.entry[0] - cx);
@@ -72,10 +54,14 @@ export function layoutPhotos(photos, slots) {
         return { ...s, ang, len: s.u1 - s.u0 };
       })
       .sort((p, q) => p.ang - q.ang);
-    const total = roomSlots.reduce((s, x) => s + x.len, 0);
+    if (!roomSlots.length) {
+      console.warn('Ingen vægplads i', r.id);
+      continue;
+    }
+    const total = roomSlots.reduce((s2, x) => s2 + x.len, 0);
     const N = wallItems.length;
     // Fordel med største-rest-metoden.
-    const raw = roomSlots.map((s) => (N * s.len) / total);
+    const raw = roomSlots.map((s2) => (N * s2.len) / total);
     const k = raw.map(Math.floor);
     let rest = N - k.reduce((a, b) => a + b, 0);
     raw
@@ -88,15 +74,14 @@ export function layoutPhotos(photos, slots) {
         }
       });
     let n = 0;
-    roomSlots.forEach((s, i) => {
+    roomSlots.forEach((s2, i) => {
       const count = k[i];
       if (!count) return;
-      const spacing = s.len / count;
+      const spacing = s2.len / count;
       for (let j = 0; j < count; j++) {
         const item = wallItems[n++];
-        // Gå med uret: på nogle vægge skal rækkefølgen vendes.
-        const u = s.u0 + (j + 0.5) * spacing;
-        placements.push(makeWallPlacement(r, s, u, spacing, item));
+        const u = s2.u0 + (j + 0.5) * spacing;
+        placements.push(makeWallPlacement(r, s2, u, spacing, item));
       }
     });
   }
@@ -115,6 +100,8 @@ function frameExtra(style, H) {
     case 'oval': return [0.08, 0.08, 0];
     case 'polaroid': return [0.07, 0.07, 0.2 * H];
     case 'lightbox': return [0.04, 0.04, 0];
+    case 'phone': return [0.04, 0.06, 0];
+    case 'screen': return [0.05, 0.05, 0];
     default: return [0.1, 0.1, 0];
   }
 }
@@ -123,6 +110,8 @@ function sizeFor(photo, style, targetH, maxW) {
   const a = photo.w / photo.h;
   let h = a > 1.05 ? targetH * 0.86 : targetH;
   if (style === 'polaroid') h *= 0.72;
+  if (style === 'phone') h *= 1.05;
+  if (style === 'screen') h *= 1.1;
   let w = h * a;
   const [bx] = frameExtra(style, h);
   if (w + 2 * bx > maxW) {
@@ -150,10 +139,45 @@ function makeWallPlacement(room, slot, u, spacing, item) {
   };
 }
 
+// Klassisk salonophængning: to rækker tæt ophængte værker på nordvæggen.
+function placeSalonHang(room, items, out) {
+  if (!items.length) return;
+  const face = room.z0 + T;
+  const cx = (room.x0 + room.x1) / 2;
+  const lowerN = Math.ceil(items.length / 2) + (items.length > 4 ? 0 : 0);
+  const rows = [
+    { y: 1.62, items: items.slice(0, lowerN), sizes: [1.02, 0.84, 1.1, 0.9, 1.0] },
+    { y: 3.0, items: items.slice(lowerN), sizes: [0.82, 0.95, 0.8, 0.9] },
+  ];
+  const gap = 0.34;
+  for (const row of rows) {
+    const dims = row.items.map((it, i) => {
+      const [w, h] = sizeFor(it.photo, it.style, row.sizes[i % row.sizes.length], 2.0);
+      const [bx, by, extra] = frameExtra(it.style, h);
+      return { it, w, h, ow: w + 2 * bx, oh: h + 2 * by + extra };
+    });
+    const total = dims.reduce((a, d) => a + d.ow, 0) + gap * (dims.length - 1);
+    let x = cx - total / 2;
+    for (const d of dims) {
+      const px = x + d.ow / 2;
+      out.push({ ...d.it, roomDef: room, kind: 'wall', hang: true, noPlaque: true, pictureLight: true, pos: new THREE.Vector3(px, row.y, face), normal: new THREE.Vector3(0, 0, 1), rotY: 0, w: d.w, h: d.h });
+      x += d.ow + gap;
+    }
+  }
+}
+
+// Værket over kaminen på vestvæggen.
+function placeMantel(room, items, out) {
+  items.slice(0, 1).forEach((it) => {
+    const [w, h] = sizeFor(it.photo, it.style, 1.2, 1.6);
+    out.push({ ...it, roomDef: room, kind: 'wall', plaqueBelow: true, pictureLight: true, pos: new THREE.Vector3(room.x0 + T, 2.78, (room.z0 + room.z1) / 2), normal: new THREE.Vector3(1, 0, 0), rotY: Math.PI / 2, w, h });
+  });
+}
+
 function placeEasels(room, items, out) {
   // Staffelier står frit på gulvet og vender mod rummets midte/indgang.
   const spots = {
-    hall: [[-5.2, -11.6], [5.2, -4.4], [-5.2, -4.4], [5.2, -11.6]],
+    hall: [[-5.2, -11.6], [5.2, -11.6]],
     foyer: [[-3.6, 3.2], [3.6, 7.6]],
     sushi: [[-18.6, -3.6], [-11.6, -12.6]],
     cafe: [[12.2, -12.4], [12.2, -3.4]],
@@ -173,27 +197,37 @@ function placeEasels(room, items, out) {
   });
 }
 
+export const MASTER_SPOT = { x: 0, y: 2.45, z: -26 + T };
+
 function placeFinal(room, items, out) {
-  const master = items.find((a) => a.style === 'masterpiece') || items[0];
-  const others = items.filter((a) => a !== master);
-  {
+  const photos = items.filter((a) => !a.isVideo);
+  const vids = items.filter((a) => a.isVideo);
+  const master = photos.find((a) => a.style === 'masterpiece') || photos[0];
+  const others = photos.filter((a) => a !== master);
+  if (master) {
     const a = master.photo.w / master.photo.h;
-    const h = a > 1 ? 2.25 : 2.6;
-    out.push({ ...master, style: 'masterpiece', roomDef: room, kind: 'wall', pos: new THREE.Vector3(0, 2.5, room.z0 + T), normal: new THREE.Vector3(0, 0, 1), rotY: 0, w: h * a, h });
+    const h = a > 1 ? 2.2 : 2.55;
+    out.push({ ...master, style: 'masterpiece', roomDef: room, kind: 'wall', master: true, pos: new THREE.Vector3(MASTER_SPOT.x, MASTER_SPOT.y, MASTER_SPOT.z), normal: new THREE.Vector3(0, 0, 1), rotY: 0, w: h * a, h });
   }
-  // Øvrige billeder på østvæggen og sydvæggen ved siden af døren.
+  // Øvrige billeder på øst-, syd- og vestvæggen.
   const spots = [
-    [room.x1 - T, -21, [-1, 0]],
-    [-3.1, room.z1 - T, [0, -1]],
-    [3.1, room.z1 - T, [0, -1]],
-    [room.x1 - T, -23.6, [-1, 0]],
-    [room.x1 - T, -18.6, [-1, 0]],
+    [room.x1 - T, -21, [-1, 0], 2.2],
+    [-3.1, room.z1 - T, [0, -1], 1.5],
+    [3.1, room.z1 - T, [0, -1], 1.5],
+    [room.x0 + T, -23.5, [1, 0], 1.4],
+    [room.x1 - T, -24.0, [-1, 0], 1.3],
+    [room.x0 + T, -18.5, [1, 0], 1.3],
   ];
   others.forEach((item, i) => {
-    const [x, z, n] = spots[i % spots.length];
+    const [x, z, n, maxW] = spots[i % spots.length];
     const style = item.style === 'masterpiece' ? 'gold' : item.style;
-    const [w, h] = sizeFor(item.photo, style, 1.35, i === 0 ? 2.2 : 1.5);
+    const [w, h] = sizeFor(item.photo, style, 1.35, maxW);
     out.push({ ...item, style, roomDef: room, kind: 'wall', pos: new THREE.Vector3(x, 1.8, z), normal: new THREE.Vector3(n[0], 0, n[1]), rotY: Math.atan2(n[0], n[1]), w, h });
+  });
+  vids.forEach((item, i) => {
+    const [w, h] = sizeFor(item.photo, 'screen', 1.45, 1.4);
+    const z = -21 + i * 2.6;
+    out.push({ ...item, style: 'screen', roomDef: room, kind: 'wall', pos: new THREE.Vector3(room.x0 + T, 1.85, z), normal: new THREE.Vector3(1, 0, 0), rotY: Math.PI / 2, w, h });
   });
 }
 
@@ -332,9 +366,24 @@ function buildFrameParts(style, w, h, M, seedRot) {
     }
     case 'screen': {
       slab(parts, M.frameBlack, w + 0.08, h + 0.08, 0.05, 0);
+      rectFrame(parts, M.brass, w + 0.08, h + 0.08, 0.018, 0.056, 0);
       photoZ = 0.051;
-      outerW = w + 0.08;
-      outerH = h + 0.08;
+      outerW = w + 0.116;
+      outerH = h + 0.116;
+      break;
+    }
+    case 'phone': {
+      // smartphone med sort kant, kameraø og knapper
+      slab(parts, M.frameBlack, w + 0.07, h + 0.12, 0.022, 0.004);
+      rectFrame(parts, M.chrome, w + 0.07, h + 0.12, 0.008, 0.024, 0.003);
+      slab(parts, M.chrome, 0.006, 0.12, 0.012, 0.008, (w + 0.07) / 2 + 0.01, 0.12);
+      slab(parts, M.chrome, 0.006, 0.06, 0.012, 0.008, (w + 0.07) / 2 + 0.01, -0.04);
+      parts.push({ g: new THREE.CircleGeometry(0.009, 12), m: M.frameBlack, p: [0, h / 2 + 0.03, 0.0275] });
+      const sh = new THREE.PlaneGeometry((w + 0.07) * 1.3, (h + 0.12) * 1.15);
+      parts.push({ g: sh, m: M.shadow, p: [0.02, -0.03, 0.002] });
+      photoZ = 0.0265;
+      outerW = w + 0.086;
+      outerH = h + 0.136;
       break;
     }
     default:
@@ -344,7 +393,7 @@ function buildFrameParts(style, w, h, M, seedRot) {
 }
 
 // --- Skilte -------------------------------------------------------------------
-function plaqueCanvas(photo, number, dark) {
+function plaqueCanvas(photo, label, dark) {
   const W = 512;
   const pad = 30;
   const [mc, mctx] = canvas(8, 8);
@@ -384,7 +433,7 @@ function plaqueCanvas(photo, number, dark) {
   }
   ctx.fillStyle = dark ? '#a8925f' : '#a49b8d';
   ctx.font = '500 16px Inter, system-ui, sans-serif';
-  ctx.fillText(`NR. ${String(number).padStart(2, '0')}`, pad, H - pad * 0.7);
+  ctx.fillText(typeof label === 'number' ? `NR. ${String(label).padStart(2, '0')}` : String(label), pad, H - pad * 0.7);
   return c;
 }
 
@@ -431,14 +480,17 @@ export function buildPhotos(scene, B, M, placements, ceilingFixtures = true) {
       part.g.dispose();
     }
     // Fotoet
-    const photoMat = new THREE.MeshBasicMaterial({ color: pl.photo.color || '#777777', toneMapped: false });
+    const photoMat = new THREE.MeshBasicMaterial({ color: pl.isVideo ? '#151515' : pl.photo.color || '#777777', toneMapped: false });
     const mesh = new THREE.Mesh(fp.photoGeom, photoMat);
     mesh.matrixAutoUpdate = false;
     mesh.matrix.copy(frameMatrix).multiply(new THREE.Matrix4().makeTranslation(fp.photoOffset[0], fp.photoOffset[1], fp.photoZ));
     mesh.matrixWorldNeedsUpdate = true;
-    mesh.userData.photoIndex = pl.index;
+    const tag = pl.isVideo ? { videoIndex: pl.index } : { photoIndex: pl.index };
+    Object.assign(mesh.userData, tag);
     scene.add(mesh);
 
+    const n = pl.normal;
+    const right = new THREE.Vector3(n.z, 0, -n.x);
     // Håndskrevet tekst på polaroid
     if (style === 'polaroid') {
       const ct = new THREE.CanvasTexture(polaroidCaption(pl.photo.title));
@@ -448,21 +500,21 @@ export function buildPhotos(scene, B, M, placements, ceilingFixtures = true) {
       const bottom = 0.22 * Math.max(pl.w, 0.6);
       cm.matrixAutoUpdate = false;
       cm.matrix.copy(frameMatrix).multiply(new THREE.Matrix4().makeTranslation(0, -pl.h / 2 - bottom / 2 + side * 0.15, 0.0135));
-      cm.userData.photoIndex = pl.index;
+      Object.assign(cm.userData, tag);
       scene.add(cm);
     }
 
     // Museumsskilt
-    const dark = pl.roomDef.id === 'final' || pl.roomDef.id === 'sushi';
-    const pc = plaqueCanvas(pl.photo, pl.index + 1, dark);
+    const dark = pl.roomDef.id === 'final' || pl.roomDef.id === 'sushi' || pl.roomDef.id === 'salon';
+    let plaque = null;
+    const pc = pl.noPlaque ? null : plaqueCanvas(pl.photo, pl.isVideo ? 'VIDEOINSTALLATION' : pl.index + 1, dark);
+    if (pc) {
     const pt = new THREE.CanvasTexture(pc);
     pt.colorSpace = THREE.SRGBColorSpace;
     pt.anisotropy = 4;
     const pw = 0.3;
     const ph = pw * (pc.height / pc.width);
-    const plaque = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), new THREE.MeshBasicMaterial({ map: pt, toneMapped: false, color: dark ? '#ffffff' : '#f2efe8' }));
-    const n = pl.normal;
-    const right = new THREE.Vector3(n.z, 0, -n.x);
+    plaque = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), new THREE.MeshBasicMaterial({ map: pt, toneMapped: false, color: dark ? '#ffffff' : '#f2efe8' }));
     let plaquePos;
     if (pl.kind === 'easel') {
       // lille skilt på en stander ved siden af staffeliet
@@ -471,6 +523,10 @@ export function buildPhotos(scene, B, M, placements, ceilingFixtures = true) {
       B.box(M.brass, 0.03, 0.95, 0.03, plaquePos.x - n.x * 0.03, 0.48, plaquePos.z - n.z * 0.03);
       B.box(M.brass, 0.26, 0.02, 0.26, plaquePos.x - n.x * 0.03, 0.01, plaquePos.z - n.z * 0.03);
       B.box(M.frameBlack, pw + 0.02, ph + 0.02, 0.012, plaquePos.x - n.x * 0.008, plaquePos.y, plaquePos.z - n.z * 0.008, { ry: pl.rotY, rx: 0 });
+    } else if (pl.plaqueBelow) {
+      plaquePos = pl.pos.clone().addScaledVector(n, 0.012);
+      plaquePos.y = pl.pos.y - fp.outerH / 2 - ph / 2 - 0.1;
+      B.box(M.gold, pw + 0.014, ph + 0.014, 0.01, plaquePos.x - n.x * 0.006, plaquePos.y, plaquePos.z - n.z * 0.006, { ry: pl.rotY });
     } else {
       const off = fp.outerW / 2 + 0.14 + pw / 2;
       plaquePos = pl.pos.clone().addScaledVector(right, off).addScaledVector(n, 0.012);
@@ -479,8 +535,9 @@ export function buildPhotos(scene, B, M, placements, ceilingFixtures = true) {
     }
     plaque.position.copy(plaquePos);
     plaque.rotation.y = pl.rotY;
-    plaque.userData.photoIndex = pl.index;
+    Object.assign(plaque.userData, tag);
     scene.add(plaque);
+    }
 
     // Lys: kegle på væggen + spot i loftet
     if (pl.kind === 'wall') {
@@ -488,7 +545,14 @@ export function buildPhotos(scene, B, M, placements, ceilingFixtures = true) {
       const pm = base.clone().multiply(new THREE.Matrix4().makeTranslation(0, 0.2, 0.004));
       B.add(pool, M.pool, pm);
       pool.dispose();
-      if (ceilingFixtures) {
+      if (pl.pictureLight) {
+        // billedlampe i messing over rammen
+        const top = pl.pos.y + fp.outerH / 2 + 0.06;
+        const lw = Math.min(0.7, fp.outerW * 0.6);
+        B.box(M.brass, lw, 0.05, 0.05, pl.pos.x + n.x * 0.16, top + 0.04, pl.pos.z + n.z * 0.16, { ry: pl.rotY });
+        B.box(M.brass, 0.025, 0.025, 0.16, pl.pos.x + n.x * 0.08, top, pl.pos.z + n.z * 0.08, { ry: pl.rotY });
+        B.box(M.warmLight, lw - 0.04, 0.012, 0.03, pl.pos.x + n.x * 0.16, top + 0.012, pl.pos.z + n.z * 0.16, { ry: pl.rotY });
+      } else if (ceilingFixtures) {
         const hRoom = pl.roomDef.h;
         const out = 1.25;
         const fx = pl.pos.x + n.x * out;
@@ -537,7 +601,7 @@ export function buildPhotos(scene, B, M, placements, ceilingFixtures = true) {
       sh.rotateX(-Math.PI / 2);
       B.add(sh, M.shadow, em.clone().multiply(matrixFrom([0, 0.004, 0])));
     }
-    items.push({ placement: pl, mesh, plaque, outerW: fp.outerW, outerH: fp.outerH });
+    items.push({ placement: pl, mesh, plaque, outerW: fp.outerW, outerH: fp.outerH, isVideo: !!pl.isVideo });
   });
   return items;
 }

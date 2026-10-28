@@ -470,3 +470,191 @@ export function makiTop(center) {
   ctx.fillRect(56, 60, 10, 8);
   return c;
 }
+
+// --- Nye teksturer til salon, spa og statue ----------------------------------
+export function travertine() {
+  const S = 512;
+  const c = pixels(S, (u, v) => {
+    const n = fbm(u * 1.0, v * 4.0, 4, 5);
+    const k = 0.86 + (n - 0.5) * 0.18 + Math.sin(v * 60 + n * 8) * 0.012;
+    return [232 * k, 219 * k, 196 * k];
+  });
+  const ctx = c.getContext('2d');
+  ctx.strokeStyle = 'rgba(120,100,80,0.35)';
+  ctx.lineWidth = 2;
+  for (let i = 0; i <= 2; i++) {
+    ctx.beginPath();
+    ctx.moveTo(0, i * 256);
+    ctx.lineTo(S, i * 256);
+    ctx.moveTo(i * 256, 0);
+    ctx.lineTo(i * 256, S);
+    ctx.stroke();
+  }
+  return c;
+}
+
+export function mosaic(base = [32, 120, 150]) {
+  const S = 256;
+  const [c, ctx] = canvas(S, S);
+  ctx.fillStyle = '#e8eef0';
+  ctx.fillRect(0, 0, S, S);
+  const r = rng(31);
+  const n = 16;
+  const cell = S / n;
+  for (let i = 0; i < n; i++)
+    for (let j = 0; j < n; j++) {
+      const k = 0.75 + r() * 0.45;
+      ctx.fillStyle = `rgb(${base.map((b) => Math.min(255, Math.round(b * k))).join(',')})`;
+      ctx.fillRect(i * cell + 1, j * cell + 1, cell - 2, cell - 2);
+    }
+  return c;
+}
+
+export function woodSlats() {
+  const S = 512;
+  const [c, ctx] = canvas(S, S);
+  const r = rng(12);
+  const n = 16;
+  for (let i = 0; i < n; i++) {
+    woodGrain(ctx, 0, i * (S / n), S, S / n - 3, [150, 104, 66], r, false);
+    ctx.fillStyle = '#2a1b10';
+    ctx.fillRect(0, (i + 1) * (S / n) - 3, S, 3);
+  }
+  return c;
+}
+
+export function nightWindow() {
+  const [c, ctx] = canvas(128, 256);
+  const g = ctx.createLinearGradient(0, 0, 0, 256);
+  g.addColorStop(0, '#060a1c');
+  g.addColorStop(0.7, '#1a1d3a');
+  g.addColorStop(1, '#3a2a3a');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 128, 256);
+  const r = rng(8);
+  for (let i = 0; i < 26; i++) {
+    ctx.fillStyle = r() < 0.5 ? 'rgba(255,214,150,0.9)' : 'rgba(255,240,210,0.6)';
+    ctx.fillRect(r() * 128, 150 + r() * 100, 2 + r() * 3, 2 + r() * 4);
+  }
+  for (let i = 0; i < 30; i++) {
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillRect(r() * 128, r() * 120, 1, 1);
+  }
+  return c;
+}
+
+export function bookSpines() {
+  const W = 512;
+  const H = 128;
+  const [c, ctx] = canvas(W, H);
+  ctx.fillStyle = '#20140c';
+  ctx.fillRect(0, 0, W, H);
+  const r = rng(77);
+  const cols = ['#5b1a1a', '#1d3b2a', '#1b2a4a', '#6b4a1e', '#3d2a4a', '#7a6a4a', '#2a2a2a', '#8a2a1a'];
+  let x = 0;
+  while (x < W) {
+    const w = 8 + r() * 14;
+    const h = H * (0.72 + r() * 0.26);
+    ctx.fillStyle = cols[Math.floor(r() * cols.length)];
+    ctx.fillRect(x, H - h, w - 1, h);
+    ctx.fillStyle = 'rgba(214,176,98,0.8)';
+    ctx.fillRect(x + 1, H - h + 8, w - 3, 2);
+    ctx.fillRect(x + 1, H - 14, w - 3, 2);
+    x += w;
+  }
+  return c;
+}
+
+export function persianRug() {
+  const S = 512;
+  const [c, ctx] = canvas(S, S * 0.66);
+  const H = S * 0.66;
+  ctx.fillStyle = '#7a1420';
+  ctx.fillRect(0, 0, S, H);
+  ctx.strokeStyle = '#d9b46a';
+  ctx.lineWidth = 6;
+  ctx.strokeRect(14, 14, S - 28, H - 28);
+  ctx.fillStyle = '#16263e';
+  ctx.fillRect(28, 28, S - 56, 22);
+  ctx.fillRect(28, H - 50, S - 56, 22);
+  ctx.fillRect(28, 28, 22, H - 56);
+  ctx.fillRect(S - 50, 28, 22, H - 56);
+  ctx.fillStyle = '#d9b46a';
+  for (let x = 40; x < S - 40; x += 16) {
+    ctx.fillRect(x, 36, 6, 6);
+    ctx.fillRect(x, H - 42, 6, 6);
+  }
+  // medaljon
+  ctx.save();
+  ctx.translate(S / 2, H / 2);
+  for (const [r0, col] of [[120, '#16263e'], [96, '#d9b46a'], [80, '#a8323a'], [50, '#16263e'], [26, '#e9d3a0']]) {
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    for (let k = 0; k < 16; k++) {
+      const a = (k / 16) * Math.PI * 2;
+      const rr = r0 * (k % 2 ? 0.78 : 1);
+      ctx.lineTo(Math.cos(a) * rr * 1.4, Math.sin(a) * rr * 0.8);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+  return c;
+}
+
+export function tufted(base = '#3a1d14') {
+  const [c, ctx] = canvas(128, 128);
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, 128, 128);
+  for (let i = 0; i < 4; i++)
+    for (let j = 0; j < 4; j++) {
+      const x = i * 32 + (j % 2) * 16 + 8;
+      const y = j * 32 + 16;
+      const g = ctx.createRadialGradient(x, y, 1, x, y, 16);
+      g.addColorStop(0, 'rgba(0,0,0,0.55)');
+      g.addColorStop(0.25, 'rgba(0,0,0,0.1)');
+      g.addColorStop(1, 'rgba(255,255,255,0.06)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x - 16, y - 16, 32, 32);
+    }
+  return c;
+}
+
+export function statueMarble() {
+  return marbleCanvas(512, [234, 230, 222], [196, 188, 178], { seed: 11, veinK: 2, sharp: 14, turb: 6 });
+}
+
+export function hairStrands() {
+  const [c, ctx] = canvas(256, 256);
+  ctx.fillStyle = '#808080';
+  ctx.fillRect(0, 0, 256, 256);
+  const r = rng(4);
+  for (let i = 0; i < 700; i++) {
+    const x = r() * 256;
+    const y = r() * 256;
+    ctx.strokeStyle = r() < 0.5 ? '#b0b0b0' : '#505050';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.quadraticCurveTo(x + 4, y + 6, x + (r() - 0.5) * 6, y + 12);
+    ctx.stroke();
+  }
+  return c;
+}
+
+export function inscription(lines, { w = 1024, h = 256, bg = '#1c1a17', color = '#d9b25b' } = {}) {
+  const [c, ctx] = canvas(w, h);
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 5;
+  ctx.strokeRect(10, 10, w - 20, h - 20);
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  lines.forEach(([text, font, y]) => {
+    ctx.font = font;
+    ctx.fillText(text, w / 2, y, w - 60);
+  });
+  return c;
+}

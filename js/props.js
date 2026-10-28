@@ -4,7 +4,7 @@ import { canvas } from './util.js';
 import { coupeGeometry, coupeLiquidGeometry, addGlow } from './exterior.js';
 import * as TX from './textures.js';
 
-function chandelier(B, M, scene, x, y, z, ceiling, s = 1) {
+export function chandelier(B, M, scene, x, y, z, ceiling, s = 1) {
   const stemLen = ceiling - (y + 0.4 * s);
   B.geom(M.brass, new THREE.CylinderGeometry(0.018, 0.018, stemLen, 8), [x, y + 0.4 * s + stemLen / 2, z]);
   B.geom(M.brass, new THREE.SphereGeometry(0.1 * s, 14, 10), [x, y, z]);
@@ -32,7 +32,7 @@ function chandelier(B, M, scene, x, y, z, ceiling, s = 1) {
   addGlow(scene, M, [x, y + 0.15 * s, z], 2.8 * s, 0.75);
 }
 
-function bench(B, M, x, z, rotY, len = 1.9, top = M.leather) {
+export function bench(B, M, x, z, rotY, len = 1.9, top = M.leather) {
   const g = new THREE.BoxGeometry(len, 0.12, 0.46);
   B.geom(top, g, [x, 0.44, z], [0, rotY, 0]);
   const c = Math.cos(rotY);
@@ -49,7 +49,7 @@ function bench(B, M, x, z, rotY, len = 1.9, top = M.leather) {
   B.geom(M.shadow, sh, [x, 0.004, z], [0, rotY, 0]);
 }
 
-function plant(B, M, x, z, s = 1) {
+export function plant(B, M, x, z, s = 1) {
   B.geom(M.potBlack, new THREE.CylinderGeometry(0.27 * s, 0.21 * s, 0.55 * s, 18), [x, 0.275 * s, z]);
   const leaf = new THREE.SphereGeometry(0.3 * s, 12, 10);
   const pts = [[0, 0.95, 0, 1.2], [0.18, 1.25, 0.08, 0.9], [-0.16, 1.35, -0.1, 0.95], [0.05, 1.65, 0.12, 0.8], [-0.08, 1.85, -0.05, 0.65], [0.15, 1.05, -0.18, 0.8]];
@@ -109,6 +109,31 @@ function titleTexture(title, subtitle) {
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 8;
   return t;
+}
+
+// Marmorsøjle med forgyldt urne og en buket roser.
+export function flowerUrn(B, M, x, z) {
+  B.geom(M.marbleWhite, new THREE.CylinderGeometry(0.17, 0.2, 0.85, 20), [x, 0.425, z]);
+  B.box(M.marbleWhite, 0.46, 0.06, 0.46, x, 0.03, z);
+  B.box(M.marbleWhite, 0.42, 0.05, 0.42, x, 0.87, z);
+  const urn = new THREE.LatheGeometry(
+    [[0, 0], [0.09, 0], [0.06, 0.05], [0.06, 0.09], [0.15, 0.17], [0.17, 0.27], [0.14, 0.33], [0.16, 0.36], [0, 0.36]].map(([a, b]) => new THREE.Vector2(a, b)),
+    20,
+  );
+  B.geom(M.gold, urn, [x, 0.895, z]);
+  const cols = [M.rose, M.porcelain, M.rose, M.ivory];
+  const bloom = new THREE.SphereGeometry(0.06, 10, 8);
+  for (let i = 0; i < 26; i++) {
+    const a = i * 2.399;
+    const r = 0.05 + Math.sqrt(i / 26) * 0.2;
+    const y = 1.32 + Math.cos((r / 0.25) * 1.3) * 0.16;
+    B.geom(cols[i % cols.length], bloom, [x + Math.cos(a) * r, y, z + Math.sin(a) * r]);
+  }
+  const leaf = new THREE.SphereGeometry(0.07, 8, 6);
+  for (let i = 0; i < 12; i++) {
+    const a = i * 0.52;
+    B.geom(M.plantGreen, leaf, [x + Math.cos(a) * 0.25, 1.24, z + Math.sin(a) * 0.25], [0, a, 0.7], [1.3, 0.35, 0.6]);
+  }
 }
 
 // --- Rundsti for sushibåndet --------------------------------------------------------
@@ -215,16 +240,23 @@ export function buildInterior(scene, B, M, colliders, manifest) {
     plant(B, M, x, z, 1.05);
     colliders.add(x - 0.32, x + 0.32, z - 0.32, z + 0.32);
   }
-  // rund fløjlssofa med palme i midten
-  B.geom(M.velvet, new THREE.CylinderGeometry(0.85, 0.85, 0.44, 32), [-3.3, 0.22, 4.8]);
-  B.geom(M.velvet, new THREE.CylinderGeometry(0.42, 0.5, 0.75, 24), [-3.3, 0.6, 4.8]);
-  B.geom(M.gold, new THREE.TorusGeometry(0.85, 0.02, 6, 48).rotateX(Math.PI / 2), [-3.3, 0.44, 4.8]);
-  plant(B, M, -3.3, 4.8, 0.8);
-  colliders.add(-4.15, -2.45, 3.95, 5.65);
+  // rund fløjlssofa med palme i midten (væk fra dørene til fløjene)
+  const sofaX = -3.3;
+  const sofaZ = 2.3;
+  B.geom(M.velvet, new THREE.CylinderGeometry(0.85, 0.85, 0.44, 32), [sofaX, 0.22, sofaZ]);
+  B.geom(M.velvet, new THREE.CylinderGeometry(0.42, 0.5, 0.75, 24), [sofaX, 0.6, sofaZ]);
+  B.geom(M.gold, new THREE.TorusGeometry(0.85, 0.02, 6, 48).rotateX(Math.PI / 2), [sofaX, 0.44, sofaZ]);
+  plant(B, M, sofaX, sofaZ, 0.8);
+  colliders.add(sofaX - 0.85, sofaX + 0.85, sofaZ - 0.85, sofaZ + 0.85);
+  // blomsteropsatser ved indgangen
+  for (const x of [-2.05, 2.05]) {
+    flowerUrn(B, M, x, 9.3);
+    colliders.add(x - 0.3, x + 0.3, 9.0, 9.6);
+  }
 
   // Champagnetårn
   const tx = 3.3;
-  const tz = 4.8;
+  const tz = 7.5;
   B.geom(M.marbleWhite, new THREE.CylinderGeometry(0.72, 0.72, 0.05, 40), [tx, 0.95, tz]);
   B.geom(M.gold, new THREE.CylinderGeometry(0.06, 0.06, 0.9, 12), [tx, 0.48, tz]);
   B.geom(M.gold, new THREE.CylinderGeometry(0.36, 0.42, 0.05, 32), [tx, 0.025, tz]);
@@ -279,6 +311,19 @@ export function buildInterior(scene, B, M, colliders, manifest) {
     bench(B, M, bx, bz, 0, 1.9);
     colliders.add(bx - 0.95, bx + 0.95, bz - 0.25, bz + 0.25);
   }
+  // rød løber gennem salen fra champagnesalonen til Hovedværket
+  B.box(M.carpetRed, 2.0, 0.01, 15.6, 0, 0.006, -8, { uv: 2 });
+  for (const sx of [-0.94, 0.94]) B.box(M.gold, 0.04, 0.012, 15.6, sx, 0.008, -8);
+  // fløjlsgardiner ved døren til Hovedværket
+  for (const sx of [-1, 1]) {
+    for (let f = 0; f < 5; f++) {
+      const x = sx * (1.62 + f * 0.09);
+      B.box(M.velvet, 0.08, 3.85, 0.07, x, 1.92, -15.72 + (f % 2) * 0.05);
+    }
+    B.box(M.gold, 0.06, 0.06, 0.2, sx * 1.75, 1.2, -15.6);
+    B.geom(M.gold, new THREE.ConeGeometry(0.05, 0.18, 12, 1, true), [sx * 1.82, 1.05, -15.55]);
+  }
+  B.box(M.gold, 4.2, 0.06, 0.06, 0, 3.9, -15.66);
   for (const [x, z] of [[-9.25, -0.75], [9.25, -0.75], [-9.25, -15.25], [9.25, -15.25]]) {
     plant(B, M, x, z, 1.2);
     colliders.add(x - 0.35, x + 0.35, z - 0.35, z + 0.35);

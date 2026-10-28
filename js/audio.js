@@ -293,4 +293,48 @@ export class Audio {
     o.start(t);
     o.stop(t + sec + 0.1);
   }
+
+  // --- Fyrværkeri, trommehvirvel og spa -----------------------------------------
+  boom() {
+    if (!this.ctx) return;
+    const d = 0.03 + Math.random() * 0.05;
+    this.noiseBurst({ dur: 1.2, freq: 120, q: 0.7, type: 'lowpass', gain: 0.55, attack: 0.005, when: d });
+    this.tone({ freq: 60 + Math.random() * 20, dur: 0.6, gain: 0.25, when: d });
+    for (let i = 0; i < 14; i++) this.noiseBurst({ dur: 0.03, freq: 3000 + Math.random() * 3000, q: 2, gain: 0.08, when: d + 0.25 + Math.random() * 0.9 });
+  }
+
+  whistle() {
+    if (!this.ctx) return;
+    const c = this.ctx;
+    const t = c.currentTime;
+    const o = c.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(900, t);
+    o.frequency.exponentialRampToValueAtTime(2600, t + 0.7);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.03, t + 0.05);
+    g.gain.linearRampToValueAtTime(0.0001, t + 0.72);
+    o.connect(g).connect(this.sfx);
+    o.start(t);
+    o.stop(t + 0.75);
+  }
+
+  drumroll(sec = 1.6) {
+    if (!this.ctx) return;
+    const n = Math.floor(sec * 26);
+    for (let i = 0; i < n; i++) {
+      const k = i / n;
+      this.noiseBurst({ dur: 0.06, freq: 260 + k * 120, q: 1.2, gain: 0.1 + k * 0.18, when: i / 26 });
+    }
+    this.noiseBurst({ dur: 0.9, freq: 4000, type: 'highpass', gain: 0.12, attack: 0.005, when: sec });
+    this.tone({ freq: 70, dur: 0.6, gain: 0.3, when: sec });
+  }
+
+  ahh() {
+    if (!this.ctx) return;
+    const midi = (n) => 440 * Math.pow(2, (n - 69) / 12);
+    [65, 69, 72, 76].forEach((n, i) => this.piano(midi(n), 3, 0.05, this.ctx.currentTime + i * 0.25));
+    this.noiseBurst({ dur: 4, freq: 800, q: 0.4, gain: 0.05, attack: 1.2 });
+  }
 }

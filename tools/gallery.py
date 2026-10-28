@@ -44,8 +44,8 @@ TEX_SIZE = 1024      # teksturer i 3D-galleriet
 FULL_SIZE = 2048     # fuld visning i lightbox
 DUP_THRESHOLD = 20   # dHash: max antal forskellige bits (af 256) før to billeder regnes for dubletter
 PHASH_THRESHOLD = 10 # pHash: max forskellige bits (af 64). Målt: dubletter <= 4, forskellige billeder >= 20
-ROOMS = ("foyer", "hall", "sushi", "cafe", "final")
-STYLES = ("gold", "black", "oak", "white", "canvas", "oval", "polaroid", "lightbox", "easel", "masterpiece", "auto")
+ROOMS = ("foyer", "salon", "spa", "hall", "sushi", "cafe", "final")
+STYLES = ("gold", "black", "oak", "white", "canvas", "oval", "polaroid", "lightbox", "easel", "masterpiece", "phone", "screen", "auto")
 
 
 def normalize(code: str) -> str:
@@ -186,8 +186,8 @@ def process_video(key: bytes, path: Path, entry: dict) -> dict:
         mp4 = Path(tmp) / "v.mp4"
         poster = Path(tmp) / "p.jpg"
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(path), "-map_metadata", "-1",
-                        "-vf", "scale='if(gt(iw,ih),-2,720)':'if(gt(iw,ih),720,-2)',format=yuv420p",
-                        "-c:v", "libx264", "-preset", "veryfast", "-crf", "24", "-profile:v", "main",
+                        "-vf", "scale='if(gt(iw,ih),-2,640)':'if(gt(iw,ih),640,-2)',format=yuv420p",
+                        "-c:v", "libx264", "-preset", "veryfast", "-crf", "26", "-profile:v", "main",
                         "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart", str(mp4)], check=True)
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", "0.3", "-i", str(mp4), "-frames:v", "1",
                         "-q:v", "3", str(poster)], check=True)
@@ -199,6 +199,25 @@ def process_video(key: bytes, path: Path, entry: dict) -> dict:
         write_enc(key, p_name, poster.read_bytes())
     out = {k: v for k, v in entry.items() if k != "src"}
     out.update({"file": v_name, "poster": p_name, "w": int(probe[0]), "h": int(probe[1]), "md5": md5})
+    return out
+
+
+def process_statue(key: bytes, entry: dict) -> dict:
+    """Krypterer statuens ansigt (face.json + face.jpg fra tools/statue_face.py)."""
+    out = {k: v for k, v in entry.items() if k not in ("mesh", "tex")}
+    for field, kind in (("mesh", "sm"), ("tex", "st")):
+        raw = Path(entry[field]).read_bytes()
+        name = file_id(key, hashlib.md5(raw).hexdigest(), kind)
+        write_enc(key, name, raw)
+        out[field] = name
+    return out
+
+
+def videos_of(d: dict) -> list[dict]:
+    """Videoer ligger i "videos" (liste). Ældre manifester har én "video"."""
+    out = list(d.get("videos") or [])
+    if d.get("video"):
+        out.insert(0, d["video"])
     return out
 
 
@@ -240,8 +259,10 @@ def prune_unused(manifest: dict) -> int:
     used = {"manifest.bin", "meta.json"}
     for p in manifest["photos"]:
         used |= {p["t"], p["f"]}
-    if manifest.get("video"):
-        used |= {manifest["video"]["file"], manifest["video"]["poster"]}
+    for v in videos_of(manifest):
+        used |= {v["file"], v["poster"]}
+    if manifest.get("statue"):
+        used |= {manifest["statue"]["mesh"], manifest["statue"]["tex"]}
     removed = 0
     for f in ENC.iterdir():
         if f.name not in used:
@@ -265,13 +286,14 @@ def cmd_build(args) -> None:
             continue
         photos.append(p)
         print(f"  {len(photos):2d}. {p['title']}")
-    manifest = {k: v for k, v in catalog.items() if k not in ("photos", "video")}
+    manifest = {k: v for k, v in catalog.items() if k not in ("photos", "video", "videos")}
     manifest["photos"] = photos
-    if catalog.get("video"):
-        manifest["video"] = process_video(key, Path(args.video_dir) / catalog["video"]["src"], catalog["video"])
+    manifest["videos"] = [process_video(key, Path(args.video_dir) / v["src"], v) for v in videos_of(catalog)]
+    if catalog.get("statue"):
+        manifest["statue"] = process_statue(key, catalog["statue"])
     save_manifest(key, manifest)
     removed = prune_unused(manifest)
-    print(f"Færdig: {len(photos)} billeder, video: {'ja' if manifest.get('video') else 'nej'}, "
+    print(f"Færdig: {len(photos)} billeder, {len(manifest['videos'])} videoer, "
           f"fjernede {removed} ubrugte filer.")
 
 
@@ -315,8 +337,10 @@ def cmd_verify(args) -> None:
     key = derive_key(get_code(), load_meta())
     manifest = load_manifest(key)
     names = [n for p in manifest["photos"] for n in (p["t"], p["f"])]
-    if manifest.get("video"):
-        names += [manifest["video"]["file"], manifest["video"]["poster"]]
+    for v in videos_of(manifest):
+        names += [v["file"], v["poster"]]
+    if manifest.get("statue"):
+        names += [manifest["statue"]["mesh"], manifest["statue"]["tex"]]
     for n in names:
         data = decrypt(key, (ENC / n).read_bytes())
         assert len(data) > 1000, n

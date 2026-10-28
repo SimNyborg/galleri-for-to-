@@ -365,7 +365,7 @@ export function buildArrival(scene, B, M, colliders, title) {
     colliders.add(x - 0.3, x + 0.3, z - 0.3, z + 0.3);
     return p;
   });
-  out.flashLights = [0, 1].map(() => {
+  out.flashLights = [0].map(() => {
     const l = new THREE.PointLight('#e8f0ff', 0, 9, 1.6);
     scene.add(l);
     return l;
@@ -437,6 +437,39 @@ export function buildArrival(scene, B, M, colliders, title) {
     banner.position.set(x, 5.65, 12.62);
     scene.add(banner);
     B.box(M.gold, 1.2, 0.05, 0.05, x, 7.47, 12.62);
+  }
+
+  // Baldakin over den røde løber fra kantstenen til trappen
+  {
+    const z0 = 15.2;
+    const z1 = 20.85;
+    const zc = (z0 + z1) / 2;
+    const len = z1 - z0;
+    const yTop = sy + 2.75;
+    const roof = new THREE.CylinderGeometry(1.62, 1.62, len, 28, 1, true, -Math.PI / 2, Math.PI);
+    roof.rotateX(-Math.PI / 2);
+    roof.scale(1, 0.35, 1);
+    const fabric = new THREE.MeshStandardMaterial({ color: '#0d0c10', roughness: 0.8, side: THREE.DoubleSide, envMapIntensity: 0.3 });
+    fabric.name = 'canopy';
+    B.geom(fabric, roof, [0, yTop, zc]);
+    for (const zz of [z0, z1]) for (const sx of [-1.45, 1.45]) {
+      B.geom(M.brass, new THREE.CylinderGeometry(0.035, 0.035, 2.75, 10), [sx, sy + 1.375, zz]);
+      B.geom(M.brass, new THREE.SphereGeometry(0.06, 10, 8), [sx, yTop + 0.02, zz]);
+      colliders.add(sx - 0.06, sx + 0.06, zz - 0.06, zz + 0.06);
+    }
+    for (const sx of [-1.6, 1.6]) B.box(M.gold, 0.03, 0.22, len, sx, yTop - 0.1, zc);
+    // forreste kappe med guldskrift
+    const val = textPlane(title.toUpperCase(), { w: 3.2, h: 0.36, font: '600 74px "Cormorant Garamond", Georgia, serif', px: 1024, color: '#e7c77e', bg: '#0d0c10', shadow: false });
+    val.position.set(0, yTop - 0.08, z1 + 0.012);
+    scene.add(val);
+    B.box(M.gold, 3.24, 0.03, 0.03, 0, yTop - 0.27, z1 + 0.01);
+    // små lys under baldakinen
+    for (let z = z0 + 0.4; z < z1; z += 0.55) {
+      for (const sx of [-1.3, 1.3]) {
+        B.geom(M.warmLight, new THREE.SphereGeometry(0.025, 8, 6), [sx, yTop + 0.38, z]);
+        addGlow(scene, M, [sx, yTop + 0.38, z], 0.35, 0.8);
+      }
+    }
   }
 
   // Topiarier i krukker mellem søjlerne

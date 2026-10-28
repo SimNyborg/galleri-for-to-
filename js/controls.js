@@ -55,11 +55,11 @@ export class Controls {
 
   down(e) {
     if (!this.enabled) {
-      if (e.pointerType === 'mouse') this.mouse = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), moved: 0 };
-      else this.look = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), moved: 0 };
+      if (e.pointerType === 'mouse') this.mouse = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: e.timeStamp, moved: 0 };
+      else this.look = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: e.timeStamp, moved: 0 };
       return;
     }
-    const info = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), moved: 0 };
+    const info = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: e.timeStamp, moved: 0 };
     if (e.pointerType === 'mouse') {
       if (e.button !== 0 && e.button !== 2) return;
       this.mouse = info;
@@ -111,7 +111,7 @@ export class Controls {
   }
 
   up(e, cancel = false) {
-    const isTap = (p, limit) => !cancel && p.moved < limit && performance.now() - p.t < 450;
+    const isTap = (p, limit) => !cancel && p.moved < limit && e.timeStamp - p.t < 600; // tidsstempler fra selve hændelsen, så travle billeder ikke ødelægger tryk
     if (this.mouse && e.pointerId === this.mouse.id) {
       if (isTap(this.mouse, 6)) this.onTap?.(e.clientX, e.clientY);
       this.mouse = null;
